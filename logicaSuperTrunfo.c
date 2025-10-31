@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 // Definição da estrutura para representar uma carta do Super Trunfo
 typedef struct {
@@ -15,13 +16,72 @@ typedef struct {
     float super_poder;
 } CartaSuperTrunfo;
 
+// Enum para representar os atributos
+typedef enum {
+    POPULACAO = 1,
+    AREA,
+    PIB,
+    PONTOS_TURISTICOS,
+    DENSIDADE_POPULACIONAL,
+    PIB_PER_CAPITA,
+    SUPER_PODER
+} Atributo;
+
+// Estrutura para facilitar a exibição de atributos
+typedef struct {
+    Atributo codigo;
+    char nome[50];
+} AtributoInfo;
+
+// Array de informações sobre os atributos
+AtributoInfo atributos_info[] = {
+    {POPULACAO, "Populacao"},
+    {AREA, "Area"},
+    {PIB, "PIB"},
+    {PONTOS_TURISTICOS, "Pontos Turisticos"},
+    {DENSIDADE_POPULACIONAL, "Densidade Demografica"},
+    {PIB_PER_CAPITA, "PIB per Capita"},
+    {SUPER_PODER, "Super Poder"}
+};
+
+// Função para obter o nome do atributo a partir do código
+char* getNomeAtributo(Atributo codigo) {
+    for (int i = 0; i < sizeof(atributos_info) / sizeof(AtributoInfo); i++) {
+        if (atributos_info[i].codigo == codigo) {
+            return atributos_info[i].nome;
+        }
+    }
+    return "Desconhecido";
+}
+
+// Função para obter o valor de um atributo de uma carta
+float getValorAtributo(CartaSuperTrunfo carta, Atributo atributo) {
+    switch (atributo) {
+        case POPULACAO:
+            return (float)carta.populacao;
+        case AREA:
+            return carta.area;
+        case PIB:
+            return carta.pib;
+        case PONTOS_TURISTICOS:
+            return (float)carta.pontos_turisticos;
+        case DENSIDADE_POPULACIONAL:
+            return carta.densidade_populacional;
+        case PIB_PER_CAPITA:
+            return carta.pib_per_capita;
+        case SUPER_PODER:
+            return carta.super_poder;
+        default:
+            return 0.0;
+    }
+}
+
 // Função para calcular o Super Poder
 float calcularSuperPoder(CartaSuperTrunfo *carta) {
     float inverso_densidade_populacional = 0.0;
     if (carta->densidade_populacional > 0) {
         inverso_densidade_populacional = 1.0 / carta->densidade_populacional;
     }
-    // A fórmula do super poder foi ajustada para evitar valores muito grandes
     return (float)carta->populacao / 1000000 + carta->area + carta->pib + carta->pontos_turisticos + carta->pib_per_capita / 10000 + inverso_densidade_populacional * 100;
 }
 
@@ -70,27 +130,41 @@ void exibir_carta(CartaSuperTrunfo carta) {
     printf("Super Poder: %.2f\n", carta.super_poder);
 }
 
-// Função para exibir o resultado da comparação
-void exibir_resultado_comparacao(CartaSuperTrunfo carta1, CartaSuperTrunfo carta2, const char* atributo, float valor1, float valor2) {
-    printf("\n--- Resultado da Batalha ---\n");
-    printf("Atributo de comparacao: %s\n", atributo);
-    printf("-----------------------------------\n");
-    printf("Carta 1 (%s): %.2f\n", carta1.nome_cidade, valor1);
-    printf("Carta 2 (%s): %.2f\n", carta2.nome_cidade, valor2);
-
-    if (valor1 > valor2) {
-        printf("\nResultado: Carta 1 (%s) venceu!\n", carta1.nome_cidade);
-    } else if (valor2 > valor1) {
-        printf("\nResultado: Carta 2 (%s) venceu!\n", carta2.nome_cidade);
-    } else {
-        printf("\nResultado: Empate!\n");
+// Função para exibir o menu de escolha de atributos
+void exibir_menu_atributos(Atributo atributo_ja_escolhido) {
+    printf("\n--- Escolha um Atributo para Comparacao ---\n");
+    for (int i = 0; i < sizeof(atributos_info) / sizeof(AtributoInfo); i++) {
+        if (atributos_info[i].codigo != atributo_ja_escolhido) {
+            printf("%d. %s\n", atributos_info[i].codigo, atributos_info[i].nome);
+        }
     }
-    printf("-----------------------------------\n");
+}
+
+// Função para obter a escolha do jogador, garantindo que seja válida
+Atributo obter_escolha(Atributo atributo_ja_escolhido) {
+    int escolha;
+    while (1) {
+        printf("Digite sua opcao: ");
+        if (scanf("%d", &escolha) == 1) {
+            limpar_buffer();
+            if (escolha >= POPULACAO && escolha <= SUPER_PODER && escolha != atributo_ja_escolhido) {
+                return (Atributo)escolha;
+            } else {
+                printf("Opcao invalida ou ja escolhida. Tente novamente.\n");
+            }
+        } else {
+            limpar_buffer();
+            printf("Entrada invalida. Digite um numero.\n");
+        }
+    }
 }
 
 int main() {
     CartaSuperTrunfo carta1, carta2;
-    int escolha;
+    Atributo escolha1, escolha2;
+    float valor1_c1, valor1_c2;
+    float valor2_c1, valor2_c2;
+    float soma_c1, soma_c2;
 
     // --- ENTRADA DE DADOS E CÁLCULOS ---
     ler_carta(&carta1, 1);
@@ -104,66 +178,70 @@ int main() {
     carta2.pib_per_capita = (carta2.populacao > 0) ? (carta2.pib * 1000000000) / carta2.populacao : 0;
     carta2.super_poder = calcularSuperPoder(&carta2);
 
-    // --- MENU E COMPARAÇÃO (EXECUÇÃO ÚNICA) ---
+    // --- Exibição das Cartas (Opcional) ---
     printf("\n--- Exibicao das Cartas ---\n");
     exibir_carta(carta1);
     exibir_carta(carta2);
 
-    printf("\n--- Super Trunfo: Escolha o Atributo ---\n");
-    printf("1. Populacao\n");
-    printf("2. Area\n");
-    printf("3. PIB\n");
-    printf("4. Numero de Pontos Turisticos\n");
-    printf("5. Densidade Demografica (menor valor vence)\n");
-    printf("6. PIB per Capita\n");
-    printf("7. Super Poder\n");
-    printf("8. Sair (Encerrar o programa)\n");
-    printf("Digite sua opcao: ");
-    scanf("%d", &escolha);
-    limpar_buffer();
+    // --- ESCOLHA DOS DOIS ATRIBUTOS ---
+    exibir_menu_atributos(0); // 0 indica que nenhum atributo foi escolhido ainda
+    printf("\nEscolha o PRIMEIRO atributo para a batalha.\n");
+    escolha1 = obter_escolha(0);
 
-    switch (escolha) {
-        case 1:
-            exibir_resultado_comparacao(carta1, carta2, "Populacao", (float)carta1.populacao, (float)carta2.populacao);
-            break;
-        case 2:
-            exibir_resultado_comparacao(carta1, carta2, "Area", carta1.area, carta2.area);
-            break;
-        case 3:
-            exibir_resultado_comparacao(carta1, carta2, "PIB", carta1.pib, carta2.pib);
-            break;
-        case 4:
-            exibir_resultado_comparacao(carta1, carta2, "Pontos Turisticos", (float)carta1.pontos_turisticos, (float)carta2.pontos_turisticos);
-            break;
-        case 5: { // Densidade: menor valor vence
-            printf("\n--- Resultado da Batalha ---\n");
-            printf("Atributo de comparacao: Densidade Populacional\n");
-            printf("-----------------------------------\n");
-            printf("Carta 1 (%s): %.2f hab/km²\n", carta1.nome_cidade, carta1.densidade_populacional);
-            printf("Carta 2 (%s): %.2f hab/km²\n", carta2.nome_cidade, carta2.densidade_populacional);
-            if (carta1.densidade_populacional < carta2.densidade_populacional) {
-                printf("\nResultado: Carta 1 (%s) venceu!\n", carta1.nome_cidade);
-            } else if (carta2.densidade_populacional < carta1.densidade_populacional) {
-                printf("\nResultado: Carta 2 (%s) venceu!\n", carta2.nome_cidade);
-            } else {
-                printf("\nResultado: Empate!\n");
-            }
-            printf("-----------------------------------\n");
-            break;
-        }
-        case 6:
-            exibir_resultado_comparacao(carta1, carta2, "PIB per Capita", carta1.pib_per_capita, carta2.pib_per_capita);
-            break;
-        case 7:
-            exibir_resultado_comparacao(carta1, carta2, "Super Poder", carta1.super_poder, carta2.super_poder);
-            break;
-        case 8:
-            printf("\nSaindo do jogo. Ate a proxima!\n");
-            break;
-        default:
-            printf("\nOpcao invalida! O programa sera encerrado.\n");
-            break;
+    exibir_menu_atributos(escolha1);
+    printf("\nEscolha o SEGUNDO atributo para a batalha.\n");
+    escolha2 = obter_escolha(escolha1);
+
+    // --- COMPARAÇÃO E RESULTADO ---
+    valor1_c1 = getValorAtributo(carta1, escolha1);
+    valor1_c2 = getValorAtributo(carta2, escolha1);
+    valor2_c1 = getValorAtributo(carta1, escolha2);
+    valor2_c2 = getValorAtributo(carta2, escolha2);
+
+    // Se o atributo for Densidade Demográfica, inverte o valor para a soma
+    // para que o menor valor tenha um "peso" maior
+    if (escolha1 == DENSIDADE_POPULACIONAL) {
+        valor1_c1 = (valor1_c1 > 0) ? 1.0 / valor1_c1 : 1000000.0;
+        valor1_c2 = (valor1_c2 > 0) ? 1.0 / valor1_c2 : 1000000.0;
+    }
+
+    if (escolha2 == DENSIDADE_POPULACIONAL) {
+        valor2_c1 = (valor2_c1 > 0) ? 1.0 / valor2_c1 : 1000000.0;
+        valor2_c2 = (valor2_c2 > 0) ? 1.0 / valor2_c2 : 1000000.0;
+    }
+
+    soma_c1 = valor1_c1 + valor2_c1;
+    soma_c2 = valor1_c2 + valor2_c2;
+
+    // --- EXIBIÇÃO DO RESULTADO ---
+    printf("\n--- Resultado da Batalha ---\n");
+    printf("Atributos de comparacao: %s e %s\n", getNomeAtributo(escolha1), getNomeAtributo(escolha2));
+    printf("-----------------------------------\n");
+
+    // Detalhes da Carta 1
+    printf("Carta 1 (%s):\n", carta1.nome_cidade);
+    printf("  - %s: %.2f\n", getNomeAtributo(escolha1), getValorAtributo(carta1, escolha1));
+    printf("  - %s: %.2f\n", getNomeAtributo(escolha2), getValorAtributo(carta1, escolha2));
+    printf("  - Soma dos Atributos: %.2f\n", soma_c1);
+
+    printf("\n");
+
+    // Detalhes da Carta 2
+    printf("Carta 2 (%s):\n", carta2.nome_cidade);
+    printf("  - %s: %.2f\n", getNomeAtributo(escolha1), getValorAtributo(carta2, escolha1));
+    printf("  - %s: %.2f\n", getNomeAtributo(escolha2), getValorAtributo(carta2, escolha2));
+    printf("  - Soma dos Atributos: %.2f\n", soma_c2);
+
+    printf("-----------------------------------\n");
+
+    if (soma_c1 > soma_c2) {
+        printf("\nResultado: Carta 1 (%s) venceu com a maior soma!\n", carta1.nome_cidade);
+    } else if (soma_c2 > soma_c1) {
+        printf("\nResultado: Carta 2 (%s) venceu com a maior soma!\n", carta2.nome_cidade);
+    } else {
+        printf("\nResultado: Empate!\n");
     }
 
     return 0;
 }
+  
